@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { UserRepository } from 'src/database/repositories/user.repository';
 import { CreateUserDto } from './dtos/create-user.dto';
-import { Prisma } from '@prisma/client';
 import { QueryUserDTO } from './dtos/query-user.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -13,14 +13,24 @@ export class UserService {
   }
 
   async getAll(queryUserDTO: QueryUserDTO) {
-    const queryUsers: Prisma.UserFindManyArgs = {};
+    const queryUsers: Prisma.UserFindManyArgs = {
+      orderBy: {},
+      where: {},
+    };
 
     if (queryUserDTO.sort) {
-      queryUsers.orderBy[queryUserDTO.sort] = 'asc';
+      queryUsers.orderBy = { [queryUserDTO.sort]: 'asc' };
     }
 
     if (queryUserDTO.filter) {
-      queryUsers.where.role['equals'] = queryUserDTO.filter;
+      queryUsers.where.role = { equals: queryUserDTO.filter };
+    }
+
+    if (queryUserDTO.name) {
+      queryUsers.where.AND = [
+        { firstName: { contains: queryUserDTO.name, mode: 'insensitive' } },
+        { lastName: { contains: queryUserDTO.lastName, mode: 'insensitive' } },
+      ];
     }
 
     return this.userRepository.findMany(queryUsers);
@@ -34,7 +44,6 @@ export class UserService {
     return this.userRepository.deleteById(id);
   }
 
-  // add type for data, use PartialType to implement, see Nest docs
   async updateById(id: string, data) {
     return this.userRepository.updateById(id, data);
   }

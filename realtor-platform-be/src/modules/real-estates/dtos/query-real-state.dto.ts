@@ -15,7 +15,7 @@ export class QueryRealEstateDTO {
   square?: number;
 
   @IsOptional()
-  type?: EstateType;
+  estateType?: EstateType;
 
   @IsOptional()
   userId?: string;

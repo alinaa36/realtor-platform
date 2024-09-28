@@ -3,28 +3,53 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { RealEstateService } from './real-estate.service';
 import { CreateRealEstateDTO } from './dtos/create-real-estate.dto';
 import { RealEstateByIdPipe } from 'src/pipes/real-estate-by-id.pipe';
 import { QueryRealEstateDTO } from './dtos/query-real-state.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { UpdateRealEstateDTO } from './dtos/update-real-estate.dto';
 
 @Controller('realestate')
 export class RealEstateController {
   constructor(private readonly realEstateService: RealEstateService) {}
 
   @Post()
-  async create(@Body() createRealEstateDto: CreateRealEstateDTO) {
-    return await this.realEstateService.create(createRealEstateDto);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: 'public/images',
+        filename: (req, file, cb) => {
+          cb(null, file.originalname);
+        },
+      }),
+    }),
+  )
+  async create(
+    @Body() createRealEstateDto: CreateRealEstateDTO,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return await this.realEstateService.create(createRealEstateDto, file.path);
   }
 
   @Get(':id')
   async getById(@Param('id', RealEstateByIdPipe) id: string) {
-    return await this.realEstateService.getById(id);
+    const realEstate = await this.realEstateService.getById(id);
+
+    if (!realEstate) {
+      throw new NotFoundException('Real estate not found');
+    }
+
+    return realEstate;
   }
 
   @Get()
@@ -33,11 +58,26 @@ export class RealEstateController {
   }
 
   @Patch(':id')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: 'public/images',
+        filename: (req, file, cb) => {
+          cb(null, file.originalname);
+        },
+      }),
+    }),
+  )
   async updateById(
     @Param('id', RealEstateByIdPipe) id: string,
-    @Body() CreateRealEstateDto: CreateRealEstateDTO,
+    @Body() updateRealEstateDto: UpdateRealEstateDTO,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return await this.realEstateService.updateById(id, CreateRealEstateDto);
+    return await this.realEstateService.updateById(
+      id,
+      updateRealEstateDto,
+      file ? file.path : null,
+    );
   }
 
   @Delete(':id')
@@ -45,3 +85,4 @@ export class RealEstateController {
     return await this.realEstateService.delete(id);
   }
 }
+

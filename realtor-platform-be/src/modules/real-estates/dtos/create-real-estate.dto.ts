@@ -26,10 +26,6 @@ export class CreateRealEstateDTO {
   @IsNotEmpty()
   estateType: EstateType;
 
-  @IsNotEmpty()
-  @IsString()
-  photo: string;
-
   @IsString()
   @IsNotEmpty()
   description: string;

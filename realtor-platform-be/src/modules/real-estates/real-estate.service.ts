@@ -4,6 +4,7 @@ import { QueryRealEstateDTO } from './dtos/query-real-state.dto';
 import { Prisma } from '@prisma/client';
 import { CreateRealEstateDTO } from './dtos/create-real-estate.dto';
 import { UserRepository } from 'src/database/repositories/user.repository';
+import { UpdateRealEstateDTO } from './dtos/update-real-estate.dto';
 
 @Injectable()
 export class RealEstateService {
@@ -12,7 +13,7 @@ export class RealEstateService {
     private readonly userRepository: UserRepository,
   ) {}
 
-  async create(data: CreateRealEstateDTO) {
+  async create(data: CreateRealEstateDTO, imagePath: string) {
     const userId = data.userId;
 
     const user = await this.userRepository.findById(userId);
@@ -21,16 +22,27 @@ export class RealEstateService {
 
     delete data.userId;
 
-    return this.realEstateRepository.create({
+    const image = 'http://localhost:3001/' + imagePath.replace(/\\/g, '/');
+
+    const createdRealEstate = await this.realEstateRepository.create({
       ...data,
+      photo: image,
       user: {
         connect: { id: userId },
       },
     });
+
+    console.log(createdRealEstate.photo);
+
+    return createdRealEstate;
   }
 
   async getById(id: string) {
-    return this.realEstateRepository.findById(id);
+    const realEstate = await this.realEstateRepository.findById(id);
+    if (!realEstate) {
+      throw new NotFoundException('Real estate not found');
+    }
+    return realEstate;
   }
 
   async getAll(queryRealEstateDTO: QueryRealEstateDTO) {
@@ -50,44 +62,41 @@ export class RealEstateService {
       square: queryRealEstateDTO.square
         ? { lte: queryRealEstateDTO.square }
         : {},
-      estateType: queryRealEstateDTO.type
-        ? { equals: queryRealEstateDTO.type }
+      estateType: queryRealEstateDTO.estateType
+        ? { equals: queryRealEstateDTO.estateType }
         : {},
       userId: queryRealEstateDTO.userId
         ? { equals: queryRealEstateDTO.userId }
         : undefined,
     };
 
-    // if (queryRealEstateDTO.filter) {
-    //   if (
-    //     queryRealEstateDTO.filter === EstateType.PRIVATE ||
-    //     queryRealEstateDTO.filter === EstateType.PUBLIC
-    //   ) {
-    //     queryOptions.where = {
-    //       estateType: {
-    //         equals: queryRealEstateDTO.filter,
-    //       },
-    //     };
-    //   }
-    // }
-
-    // if (queryRealEstateDTO.filterBy) {
-    //   queryOptions.where.price = {
-    //     lt: +queryRealEstateDTO.filterBy,
-    //   };
-    // }
-
-    // if (queryRealEstateDTO.filterById) {
-    //   queryOptions.where.userId = {
-    //     equals: queryRealEstateDTO.filterById,
-    //   };
-    // }
-
     return this.realEstateRepository.findMany(queryOptions);
   }
 
-  async updateById(id: string, data) {
-    return this.realEstateRepository.updateById(id, data);
+  async updateById(id: string, data: UpdateRealEstateDTO, imagePath?: string) {
+    const userId = data.userId;
+
+    // Якщо imagePath не вказано, не додаємо поле photo до updateData
+    const updateData: any = {
+      ...data,
+      user: userId ? { connect: { id: userId } } : undefined,
+    };
+
+    if (imagePath) {
+      const image = 'http://localhost:3001/' + imagePath.replace(/\\/g, '/');
+      updateData.photo = image;
+    }
+
+    delete updateData.userId;
+
+    const updatedRealEstate = await this.realEstateRepository.updateById(
+      id,
+      updateData,
+    );
+
+    console.log(updatedRealEstate.photo);
+
+    return updatedRealEstate;
   }
 
   async delete(id: string) {
