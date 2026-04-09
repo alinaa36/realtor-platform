@@ -10,7 +10,8 @@ import { join } from 'path';
     DatabaseModule,
     UserModule,
     RealEstateModule,
-    ServeStaticModule.forRoot({
+    ServeStaticModule.forRoot(
+      {
       rootPath: join(__dirname, '../..'),
     }),
   ],
